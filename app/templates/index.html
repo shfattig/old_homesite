@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h1>Hello, {{ current_user.username }}</h1>
+    <form action="" method="post">
+        {{ add_form.hidden_tag() }}
+        <p>
+            {{ add_form.item_input.label }}<br>
+            {{ add_form.item_input(cols=32, rows=1) }}<br>
+            {% for error in add_form.item_input.errors %}
+            <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+        <p>{{ add_form.add_item() }}</p>
+    </form>
+    <h2>Here are your items:</h2>
+    <form action="" method="post">
+        {{ list_form.hidden_tag() }}
+        <dl>
+            {% for item in item_list %}
+            <dt><input type="checkbox" name="{{ item.id }}">{{ item.name }} (<i>{{ item.requestor.username }}</i>)
+                {% if item_states[item.id].editing_comment %}
+                <dd>- {{ list_form.comment(rows='1', columns='10') }} {{ list_form.submit_comment() }}</dd>
+                {% else %}
+                    {% if item.comment %}
+                    <dd style="font-size:100%;">- {{ item.comment }}
+                    {% endif %}
+                <a href="{{ url_for('edit_comment', item_id=item.id) }}" style="font-size:80%;">  Edit comment</a></dd>
+                {% endif %}
+            </dt>
+            {% endfor %}
+        </dl>
+        <p>{{ list_form.clear_all() }} {{ list_form.clear_selected() }}</p>
+    </form>
+{% endblock %}
