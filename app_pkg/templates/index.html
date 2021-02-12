@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+    <script src="//code.jquery.com/jquery-1.12.4.min.js" integrity="sha256-ZosEbRLbNQzLpnKIkEdrPv7lOy9C27hHQ+Xp8a4MxAQ=" crossorigin="anonymous"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js" integrity="sha256-yr4fRk/GU1ehYJPAs8P4JlTgu0Hdsp4ZKrx8bDEDC3I=" crossorigin="anonymous"></script>
+    <script type="text/javascript" charset="utf-8">
+        $(document).ready(function() {
+            // Use a "/test" namespace.
+            // An application can open a connection on multiple namespaces, and
+            // Socket.IO will multiplex all those connections on a single
+            // physical channel. If you don't care about multiple channels, you
+            // can set the namespace to an empty string.
+            namespace = '/groceries';
+
+            // Connect to the Socket.IO server.
+            // The connection URL has the following format, relative to the current page:
+            //     http[s]://<domain>:<port>[/<namespace>]
+            var grocery_socket = io(namespace);
+
+            // Event handler for new connections.
+            // The callback function is invoked when a connection with the
+            // server is established.
+            grocery_socket.on('connect', function() {
+                grocery_socket.emit('my_event', {data: 'I\'m connected!'});
+            });
+
+            // Event handler for server sent data.
+            // The callback function is invoked whenever the server emits data
+            // to the client. The data is then displayed in the "Received"
+            // section of the page.
+            grocery_socket.on('add_item', function(msg, cb) {
+                $('#log').html(msg.item_id);
+
+                // New item html with checkbox
+                var dt_str = '<dt class="item_dt" id=' + msg.item_id + '><input type="checkbox" name="' + msg.item_id + '">';
+
+                // Add item name
+                dt_str +=  $('<dt/>').text(msg.item_name).html();
+
+                // Add username in italics
+                dt_str += ' (<i>' + $('<dt/>').text(msg.username).html() + '</i>)';
+
+                // Add button for commenting
+                var comment_button = '  <button class="add_comment" id=' + msg.item_id + ' type="button"> Comment </button>'
+
+                // If comment is present, add before comment button
+                if (msg.comment != '') {
+                    dt_str += '<dd>- ' + msg.comment + comment_button + '</dd>';
+                } else {
+                    dt_str += comment_button;
+                }
+
+                $('#list').append(dt_str)
+                if (cb)
+                    cb();
+            });
+
+            // When new comment is made
+            grocery_socket.on('new_comment', function(msg) {
+                item_id = msg.item_id;
+                comment_id = msg.comment_id;
+
+                // Add new html for comment
+                $('.item_dt#' + item_id).append('<dd class="comment_dd" id=' + comment_id + '><form class="comment_edit" method="POST" action="#">- <input id=' + comment_id + ' class="comment_input"><input type="submit" value="Done"></form></dd>');
+
+            });
+
+            // Handlers for page forms //
+
+            $('dl#list').on("click", ".add_comment", function(event) {
+                var itemid = $(this).attr('id');
+                grocery_socket.emit('new_comment', {item_id: itemid});
+            });
+
+            $('form#add_item').submit(function(event) {
+
+                // Emit signal to backend to add new item
+                grocery_socket.emit('add_item', {data: $('#new_item').val()});
+
+                // Clear input box
+                $( this ).find("#new_item").val('')
+
+                return false;
+            });
+        
+            $('dl#list').on("click", ".commentX", function(event) {
+                var comment_id = $(this).attr('id');
+                $('.comment_dd#' + comment_id).remove();
+                grocery_socket.emit('delete_comment', {comment_id: comment_id});
+            });
+
+            $('dl#list').on("click", ".comment_text", function(event) {
+                var comment_id = $(this).attr('id');
+                editComment(comment_id);
+            });
+
+            // On submitting new comment
+            $('dl#list').on("submit", ".comment_edit", function(event) {
+                var item_id = $(event.target).parent().parent().attr("id");
+                var comment_text = $(event.target).find(".comment_input").val();
+                var comment_id = $(event.target).find(".comment_input").attr("id");
+
+                // Tell backend about new comment
+                grocery_socket.emit('submit_comment', {data: comment_text, item_id: item_id, comment_id: comment_id});
+
+                return false;
+            });
+
+            grocery_socket.on('submit_comment', function(msg) {
+                // Replace input element with comment itself
+                comment_id = msg.comment_id;
+                comment = msg.comment;
+                $(".comment_dd#" + comment_id).after('<dd class="comment_dd" id=' + comment_id + '><span class="comment_text" id=' + comment_id + '>- ' + comment + ' </span><input type="button" id=' + comment_id + ' class="commentX" value="&#10006"></dd>');
+                $(".comment_dd#" + comment_id).remove();
+
+                $(".comment_text#" + comment_id).click(function(event) {
+                    editComment(comment_id);
+                });
+            });
+
+
+        });
+        
+        function editComment(comment_id) {
+
+            // Get current text
+            var text = $(event.target).text().slice(2);
+
+            // Disable click handler
+            $('.comment_text#' + comment_id).unbind('click');
+
+            // Show input, populated with current text
+            $('.comment_dd#' + comment_id).after('<dd class="comment_dd" id=' + comment_id + '><form class="comment_edit" method="POST" action="#">- <input id=' + comment_id + ' class="comment_input" value="' + text + '"><input type="submit" value="Done"></form></dd>');
+            $('.comment_dd#' + comment_id).remove();
+        };
+
+    </script>
+
+    <h1>Hello, {{ current_user.username }}</h1>
+    <h2>TestSite <span id=testlist></span></h2>
+    <form id="add_item" method="POST" action="#">
+        {{ add_form.hidden_tag() }}
+        <label for="new_item">New Item:</label><br>
+        <input id="new_item" name="new_item" size="25"><br>
+        
+        {% for error in add_form.item_input.errors %}
+            <span style="color: red;">[{{ error }}]</span>
+        {% endfor %}
+        <input type="submit" value="Add">
+    </form>
+    <h2>Here are your items:</h2>
+    <form action="" method="post">
+        <dl id="list">
+            {% for item in item_list %}
+                <dt class="item_dt" id="{{ item.id }}"><input type="checkbox" name="{{ item.id }}">{{ item.name }} (<i>{{ item.requestor.username }}</i>)
+                <button class='add_comment' id={{ item.id }} type="button"> Comment </button></dt>
+                {% for comment in item.comments|reverse %}
+                    <dd class="comment_dd" id={{ comment.id }} style="font-size:100%;"><span class="comment_text" id={{ comment.id }}>- {{ comment.text }} </span><input type="button" class="commentX" id={{ comment.id }} value="&#10006"></dd>
+                {% endfor %}
+            {% endfor %}
+        </dl>
+        {{ list_form.hidden_tag() }}
+        <p>{{ list_form.clear_all() }} {{ list_form.clear_selected() }}</p>
+    </form>
+{% endblock %}

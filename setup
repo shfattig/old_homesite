@@ -1,0 +1,5 @@
+
+
+source venv/bin/activate
+
+alias run="python homesite.py"
