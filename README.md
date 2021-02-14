@@ -13,8 +13,11 @@ vim -S Session.vim
 
 // - - - - - - - - - - - - DATABASE - - - - - - - - - - - - //
 
+// Initialize database
+flask db init
+
 // Migrate database changes (or new table)
-flask db migrate -m "<tablename> table"
+flask db migrate -m "message"
 
 // Apply database changes
 flask db upgrade
