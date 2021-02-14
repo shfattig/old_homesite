@@ -6,6 +6,7 @@ from app_pkg.models import User, Item, Comment, Drawing
 from werkzeug.urls import url_parse
 from threading import Lock
 from flask_socketio import emit
+from sqlalchemy import exc
 
 ##### Initializations #####
 thread = None
@@ -24,8 +25,10 @@ class StateManager:
         for item_id in item_id_list:
             self.item_states[item_id] = ItemState()
 
-
-my_state_manager = StateManager([item.id for item in db.session.query(Item).all()])
+try:
+    my_state_manager = StateManager([item.id for item in db.session.query(Item).all()])
+except exc.SQLAlchemyError:
+    pass
 
 
 @app.route('/', methods=['GET', 'POST'])
