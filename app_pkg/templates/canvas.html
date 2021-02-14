@@ -138,8 +138,8 @@ function getTouchPos(e) {
 }
 
 function getClickPos(e) {
-    curX = e.clientX - canvas.offsetLeft;
-    curY = e.clientY - canvas.offsetTop;
+    curX = e.pageX - canvas.offsetLeft;
+    curY = e.pageY - canvas.offsetTop;
 }
 
 // update display
