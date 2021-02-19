@@ -274,6 +274,9 @@ function pencil (){
         if (eraser_on){
             ctx.strokeStyle = background_color
         }
+	else {
+	    ctx.strokeStyle = current_color
+	}
         ctx.stroke();
         canvas_data.pencil.push({ "startx": prevX, "starty": prevY, "endx": curX, "endy": curY,
             "thick": ctx.lineWidth, "color": ctx.strokeStyle });
