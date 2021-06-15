@@ -28,7 +28,6 @@ class StateManager:
         for item_id in item_id_list:
             self.item_states[item_id] = ItemState()
 
-
 try:
     my_state_manager = StateManager([item.id for item in db.session.query(Item).all()])
 except exc.SQLAlchemyError:
