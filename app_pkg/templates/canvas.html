@@ -105,6 +105,7 @@ var stroke_value = false;
 var canvas_data = {'pencil': [], 'line': [], 'rectangle': [], 'circle': [], 'eraser': []}
 var first_click = false;
 var current_color = "#000000";
+var background_color = "#ffffff";
 var eraser_on = false;
 var pencil_on = false;
 var line_on = false;
@@ -122,8 +123,8 @@ function getTouchPos(e) {
 }
 
 function getClickPos(e) {
-    curX = e.clientX - canvas.offsetLeft;
-    curY = e.clientY - canvas.offsetTop;
+    curX = e.pageX - canvas.offsetLeft;
+    curY = e.pageY - canvas.offsetTop;
 }
 
 // update display
@@ -178,65 +179,6 @@ function reset(){
     canvas_data = { "pencil": [], "line": [], "rectangle": [], "circle": [], "eraser": [] }
 }
 
-// eraser tool
-function eraser(){
-
-    canvas.onmousedown = function (e){
-        getClickPos(e)
-        hold = true;
-
-        prevX = curX;
-        prevY = curY;
-        ctx.beginPath();
-        ctx.moveTo(prevX, prevY);
-    };
-
-    canvas.ontouchstart = function (e){
-        hold = true;
-        getTouchPos(e)
-        prevX = curX;
-        prevY = curY;
-        ctx.beginPath();
-        ctx.moveTo(prevX, prevY);
-        event.preventDefault()
-    };
-
-    canvas.ontouchmove = function (e){
-        console.log("touch moved")
-        if(hold){
-            getTouchPos(e)
-            draw();
-        }
-        event.preventDefault()
-    };
-
-    canvas.onmousemove = function (e){
-        if(hold){
-            getClickPos(e)
-            draw();
-        }
-    };
-
-    canvas.ontouchend = function (e) {
-        hold = false;
-    };
-
-    canvas.onmouseup = function (e){
-        hold = false;
-    };
-
-    canvas.onmouseout = function (e){
-        hold = false;
-    };
-
-    function draw (){
-        ctx.lineTo(curX, curY);
-        ctx.strokeStyle = "#ffffff"
-        ctx.stroke();
-        canvas_data.pencil.push({ "startx": prevX, "starty": prevY, "endx": curX, "endy": curY,
-            "thick": ctx.lineWidth, "color": ctx.strokeStyle });
-    }
-}
 
 function pencil_clicked() {
     eraser_on = false;
@@ -245,7 +187,6 @@ function pencil_clicked() {
     rect_on = false;
     circle_on = false;
     update()
-
     pencil()
 }
 
@@ -257,8 +198,6 @@ function eraser_clicked() {
     rect_on = false;
     circle_on = false;
     update()
-
-    eraser()
 }
 
 // pencil tool
@@ -316,6 +255,12 @@ function pencil (){
     function draw (){
         ctx.lineTo(curX, curY);
         ctx.strokeStyle = current_color
+        if (eraser_on){
+            ctx.strokeStyle = background_color
+        }
+        else {
+            ctx.strokeStyle = current_color
+        }
         ctx.stroke();
         canvas_data.pencil.push({ "startx": prevX, "starty": prevY, "endx": curX, "endy": curY,
             "thick": ctx.lineWidth, "color": ctx.strokeStyle });
