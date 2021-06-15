@@ -64,7 +64,7 @@
     {% endif %}
     <script src="//code.jquery.com/jquery-1.12.4.min.js" integrity="sha256-ZosEbRLbNQzLpnKIkEdrPv7lOy9C27hHQ+Xp8a4MxAQ=" crossorigin="anonymous"></script>
     <script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js" integrity="sha256-yr4fRk/GU1ehYJPAs8P4JlTgu0Hdsp4ZKrx8bDEDC3I=" crossorigin="anonymous"></script>
-    <script type="text/javascript" charset="utf-8">
+    <script src="//code.jquery.com/jquery-1.12.4.min.js" type="text/javascript" charset="utf-8">
         $(document).ready(function() {
             // Use a "/test" namespace.
             // An application can open a connection on multiple namespaces, and
@@ -106,7 +106,7 @@
         {% if permissions == 0 %}
         <a href="{{ url_for('users') }}">Users</a>
         {% endif %}
-        <a href="{{ url_for('draw') }}">Draw</a>
+        <a href="{{ url_for('game_start') }}">Game</a>
         {% if current_user.is_anonymous %}
         <a href="{{ url_for('login') }}">Login</a>
         {% else %}
@@ -123,6 +123,11 @@
     </ul>
     {% endif %}
     {% endwith %}
+
+    {% for error in errors %}
+        <p style="background-color:red">{{ error }}</p>
+    {% endfor %}
+
     {% block content %}{% endblock %}
 
 <div id="snackbar"></div>

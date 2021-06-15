@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<style>
+
+.pic-container {
+    height: 500px;
+    overflow-y: scroll;
+    overflow-x: hidden;
+}
+
+</style>
+
+<div class="pic-container">
+    <h3> List of Descriptions </h3>
+    {% for desc_id, desc in desc_list %}
+        <div>
+        {% if permissions == 0 %}
+            <button onclick="del_desc('{{ desc_id }}')">Delete Desc</button>
+        {% endif %}
+        <p onclick="select_desc('{{ desc_id }}')" style="background-color:powderblue; border: pink solid 2px; cursor: pointer;">{{ desc }}</p>
+        </div>
+    {% endfor %}
+</div>
+
+<script>
+
+function select_desc(description_id)  {
+    $.post("/select_desc", {"id":description_id}, function(data, status) { window.location.href = data; });
+}
+
+function del_desc(description_id) {
+    description_id = $("textarea#description").data("id")
+    $.post("/delete_desc", {"id":description_id}, function(data, status) { showSnackbar(status + ": " + data); location.reload(); });
+}
+
+</script>
+
+{% endblock %}
+

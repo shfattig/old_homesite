@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<style>
+
+.pic-container {
+    height: 500px;
+    overflow-y: scroll;
+    overflow-x: hidden;
+}
+
+</style>
+
+<div class="pic-container">
+    <h3> List of Images </h3>
+    {% for image_name in image_list %}
+        <p> {{ image_name }}
+        {% if permissions == 0 %}
+            <button onclick="del_image('{{ image_name }}')">Delete Image</button>
+        {% endif %}
+        </p>
+        <img src="/static/images/{{ image_name }}" style="border: black solid 2px; cursor: pointer;" onclick="select_image('{{ image_name }}')">
+    {% endfor %}
+</div>
+
+<script>
+
+function select_image(filename) {
+    $.post("/select_image", { filename: filename }, function(data, status) { window.location.href = data; });
+}
+
+function del_image(filename) {
+    $.post("/delete_file", {"filename":filename}, function(data, status) { showSnackbar(status + ": " + data); location.reload(); });
+}
+
+</script>
+
+{% endblock %}

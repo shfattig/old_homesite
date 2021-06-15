@@ -2,10 +2,14 @@ from flask import render_template, flash, redirect, url_for, request, send_from_
 from app_pkg import app, db, socketio
 from app_pkg.forms import LoginForm, RegistrationForm, AddItemForm, ItemListForm, UserForm, SaveImageForm
 from flask_login import current_user, login_user, logout_user, login_required
-from app_pkg.models import User, Item, Comment, Drawing
+from app_pkg.models import User, Item, Comment, Drawing, DrawingNode, Description, DescriptionNode
 from werkzeug.urls import url_parse
 from threading import Lock
 from flask_socketio import emit
+from sqlalchemy import exc
+import json
+from base64 import b64encode, b64decode
+import os
 
 ##### Initializations #####
 thread = None
@@ -25,7 +29,10 @@ class StateManager:
             self.item_states[item_id] = ItemState()
 
 
-my_state_manager = StateManager([item.id for item in db.session.query(Item).all()])
+try:
+    my_state_manager = StateManager([item.id for item in db.session.query(Item).all()])
+except exc.SQLAlchemyError:
+    pass
 
 
 @app.route('/', methods=['GET', 'POST'])
@@ -90,7 +97,11 @@ def index():
             del my_state_manager.item_states[item.id]
         db.session.commit()
         return redirect(url_for('index'))
-    return render_template('index.html', title="Home", add_form=add_item_form, list_form=item_list_form, item_list=item_list, item_states=my_state_manager.item_states, permissions=db.session.query(User).filter_by(username=current_user.username).first().permissions)
+    try:
+        permissions = db.session.query(User).filter_by(username=current_user.username).first().permissions
+    except AttributeError:
+        permissions = 100 # high number means no permissions
+    return render_homesite_page('index.html', title="Home", add_form=add_item_form, list_form=item_list_form, item_list=item_list, item_states=my_state_manager.item_states)
 
 @socketio.on('delete_comment', namespace='/groceries')
 def delete_comment(message):
@@ -114,33 +125,33 @@ def add_item(message):
                   {'item_id': item.id, 'item_name': item.name, 'username': current_user.username, 'comment': ''},
                       namespace='/groceries')
 
-@app.route('/draw', methods=['GET', 'POST'])
-@app.route('/draw/<filename>', methods=['GET', 'POST'])
-@login_required
-def draw(filename=None, errors=[]):
+def render_homesite_page(url, errors=[], **kwargs):
     try:
-        save_form = SaveImageForm()
         permissions = db.session.query(User).filter_by(username=current_user.username).first().permissions
     except AttributeError:
         permissions = 100 # high number means no permissions
-    if save_form.validate_on_submit():
-        print("Saving image!!!")
-        print(save_form.filename.data)
-    if filename is not None:
-        image = find_image(filename)
-        if image is None:
-            image_data = None
-        else:
-            image_data = image.image_data
+    return render_template(url, permissions=permissions, errors=errors, **kwargs)
+
+@app.route('/draw', methods=['GET', 'POST'])
+@app.route('/draw/<description_id>', methods=['GET', 'POST'])
+@login_required
+def draw(description_id=None, errors=[]):
+    description = db.session.query(Description).filter_by(id=description_id).first()
+    if description is None:
+        desc_text = None
     else:
-        image_data = None
-    print('rendering template')
-    return render_template('canvas.html', image_data=image_data, image_list=retrieve_image_names(), save_form=save_form, permissions=permissions, errors=errors)
+        desc_text = description.text
+    return render_homesite_page('canvas.html', description=desc_text, desc_id=description_id)
 
 @app.route('/retrieve_image_names', methods=['GET', 'POST'])
 def retrieve_image_names():
     image_list = [image.name for image in db.session.query(Drawing).all()]
     return image_list
+
+@app.route('/retrieve_descs', methods=['GET', 'POST'])
+def retrieve_descs():
+    desc_list = [(desc.id, desc.text) for desc in db.session.query(Description).all()]
+    return desc_list
 
 def find_image(filename):
     print("Searching for file: " + filename)
@@ -159,6 +170,7 @@ def delete_image(image_name):
     if image is None:
         return 1
     else:
+        os.remove(f"app_pkg/static/{image.image_data}")
         db.session.delete(image)
         db.session.commit()
         return 0
@@ -167,8 +179,29 @@ def delete_image(image_name):
 @app.route('/load_file', methods=['GET', 'POST'])
 def load_file():
     filename = request.form['filename']
-    image_data = db.session.query(Drawing).filter_by(name=filename).first().image_data
-    return image_data
+    image = db.session.query(Drawing).filter_by(name=filename).first()
+    if image is not None:
+        drawing_node = db.session.query(DrawingNode).filter_by(drawing_id=image.id).first()
+        ## TEMP ##
+        if drawing_node is None:
+            drawing_node = DrawingNode(drawing_id=image.id)
+            db.session.add(drawing_node)
+        ## TEMP ##
+        prev_description = db.session.query(Description).filter_by(id=drawing_node.prev_desc_id).first()
+        next_description = db.session.query(Description).filter_by(id=drawing_node.next_desc_id).first()
+        if prev_description is None:
+            p_desc_text = None
+        else:
+            p_desc_text = prev_description.text
+        if next_description is None:
+            n_desc_text = None
+        else:
+            n_desc_text = next_description.text
+        image_data = get_image_data(image.image_data)
+
+        return json.dumps({'img_data':image_data, 'prev_description':p_desc_text, 'next_description':n_desc_text})
+    else:
+        return json.dumps({'img_data':None})
 
 @app.route('/delete_file', methods=['GET', 'POST'])
 def delete_file():
@@ -179,11 +212,125 @@ def delete_file():
     else:
         return "Removed {}".format(filename)
 
+@app.route('/select_image', methods=['GET', 'POST'])
+def select_image():
+    filename = request.form['filename']
+    print('Running select image for filename: ' + filename)
+    return url_for('write_description') + '/' + filename
+
+@app.route('/game_start', methods=['GET', 'POST'])
+def game_start():
+    return render_homesite_page('game_start.html')
+
+@app.route('/pick_drawing', methods=['GET', 'POST'])
+def pick_drawing():
+    return render_homesite_page('pick_drawing.html', image_list=retrieve_image_names())
+
+@app.route('/pick_description', methods=['GET', 'POST'])
+def pick_description():
+    return render_homesite_page('pick_description.html', desc_list=retrieve_descs())
+
+@app.route('/delete_desc', methods=['GET', 'POST'])
+def delete_desc():
+    desc_id = request.form['id']
+    desc = db.session.query(Description).filter_by(id=desc_id).first()
+    db.session.delete(desc)
+    db.session.commit()
+    return "Removed desc {}".format(desc_id)
+
+@app.route('/select_desc', methods=['GET', 'POST'])
+def select_desc():
+    description_id = request.form['id']
+    return url_for('draw') + '/' + description_id
+
+@app.route('/first_description', methods=['GET'])
+def first_description():
+    description = db.session.query(Description).first()
+    if description is not None:
+        return json.dumps({'text': description.text, 'id': description.id})
+    # No descriptions
+    return json.dumps({'text': "None", 'id': 0})
+
+@app.route('/prev_description', methods=['GET'])
+def prev_description():
+    description_id = int(request.args.get('id'))
+    description_list = db.session.query(Description).all()
+    for i, desc in enumerate(description_list):
+        if desc.id == description_id:
+            description = description_list[(i - 1) % len(description_list)]
+            return json.dumps({'text': description.text, 'id': description.id})
+    # No descriptions
+    return json.dumps({'text': "None", 'id': 0})
+
+@app.route('/next_description', methods=['GET'])
+def next_description():
+    description_id = int(request.args.get('id'))
+    description_list = db.session.query(Description).all()
+    for i, desc in enumerate(description_list):
+        if desc.id == description_id:
+            description = description_list[(i + 1) % len(description_list)]
+            return json.dumps({'text': description.text, 'id': description.id})
+    # No descriptions
+    return json.dumps({'text': "None", 'id': 0})
+
+@app.route('/write_description/<filename>', methods=['POST'])
+@app.route('/write_description', methods=['POST'])
+def description_post(filename=None):
+    description_text = request.form['description_text']
+
+    new_description = Description(text=description_text, user_id=current_user.id)
+    db.session.add(new_description)
+    db.session.flush()
+    db.session.refresh(new_description)
+
+    if filename is None:
+        image_id = None
+    else:
+        image = find_image(filename)
+        if image is None:
+            image_id = None
+        else:
+            image_id = image.id
+    new_description_node = DescriptionNode(desc_id=new_description.id, prev_drawing_id=image_id)
+
+    drawing_node = db.session.query(DrawingNode).filter_by(drawing_id=image_id).first()
+    if drawing_node is not None:
+        drawing_node.next_desc_id = new_description.id
+    db.session.add(new_description_node)
+
+    db.session.commit()
+    return game_start()
+
+def get_image_data(filepath):
+    """ Retrieve image file from filesystem and prepare for displaying on web
+    """
+    return f"/static/{filepath}"
+    f = open(filepath, 'rb')
+    image_data = f.read()
+    image_data = b64encode(image_data)
+    print(type(image_data))
+    image_data = image_data.replace(b"+", b" ")
+    image_data = b"data:image/png;base64," + image_data
+    return image_data
+
+@app.route('/write_description/<filename>', methods=['GET'])
+@app.route('/write_description', methods=['GET'])
+def write_description(filename=None):
+    image_name = "None"
+    image_data = None
+    if filename is not None:
+        image_name = filename
+        image = find_image(filename)
+        if image is not None:
+            image_data = get_image_data(image.image_data)
+    return render_homesite_page('description.html', image_name=image_name, image_data=image_data)
+
 @app.route('/save', methods=['GET', 'POST'])
 @login_required
 def save():
 
-    filename = request.form['save_fname']
+    # Get filename from form
+    filename = request.form['save_fname'] + '.png'
 
     # If filename given
     if filename != "":
@@ -193,20 +340,35 @@ def save():
         canvas_image = request.form['save_image']
 
         # Write image to file
-        #with open("canvas_image.png", 'w+') as f:
-        #    f.write(canvas_image)
+        filepath = f"images/{filename}"
+        with open(f"app_pkg/static/{filepath}", 'wb+') as f:
+            png_filedata = canvas_image.replace("data:image/png;base64,", "")
+            png_filedata = png_filedata.replace(" ", "+")
+            png_filedata = b64decode(png_filedata)
+            f.write(png_filedata)
 
         # If new filename, save image data to database
         if len(db.session.query(Drawing).filter_by(name=filename).all()) == 0:
-            print("Saving new drawing")
-            drawing = Drawing(name=filename, user_id=current_user.id, image_data=canvas_image)
-            db.session.add(drawing)
+            new_drawing = Drawing(name=filename, user_id=current_user.id, image_data=filepath)
+            db.session.add(new_drawing)
+            db.session.flush()
+            db.session.refresh(new_drawing)
+
+            desc_id = request.form['desc_id']
+            if desc_id == "":
+                desc_id = None
+            new_drawing_node = DrawingNode(drawing_id=new_drawing.id, prev_desc_id=desc_id)
+            description_node = db.session.query(DescriptionNode).filter_by(desc_id=desc_id).first()
+            if description_node is not None:
+                description_node.next_drawing_id = new_drawing.id
+            db.session.add(new_drawing_node)
+
             db.session.commit()
             return "No errors"
         # Overwrite old file
         else:
             drawing = db.session.query(Drawing).filter_by(name=filename).first()
-            drawing.image_data = canvas_image
+            drawing.image_data = filepath
             drawing.user_id = current_user.id
             db.session.commit()
             return "Overwrote old file: {}".format(filename)
@@ -251,7 +413,8 @@ def users():
                     db.session.delete(user)
                 db.session.commit()
                 return redirect(url_for('logout'))
-        return render_template('users.html', title="Home", form=user_form, user_list=user_list, permissions=db.session.query(User).filter_by(username=current_user.username).first().permissions)
+        return render_homesite_page('users.html', title="Home", form=user_form, user_list=user_list)
+
     else:
         flash('You do not have the proper permissions')
         return redirect(url_for('index'))
@@ -273,7 +436,7 @@ def login():
         if not next_page or url_parse(next_page).netloc != '':
             next_page = url_for('index')
         return redirect(next_page)
-    return render_template('login.html', title='Sign In', form=form, permissions=1)
+    return render_homesite_page('login.html', title='Sign In', form=form)
 
 
 @app.route('/logout')
@@ -299,11 +462,7 @@ def new_user():
             return redirect(url_for('login'))
         else:
             return redirect(url_for('users'))
-    try:
-        permissions = db.session.query(User).filter_by(username=current_user.username).first().permissions
-    except AttributeError:
-        permissions = 100 # high number means no permissions
-    return render_template('register.html', title='Register', form=form, permissions=permissions)
+    return render_homesite_page('register.html', title='Register', form=form)
 
 
 @socketio.on('new_comment', namespace='/groceries')

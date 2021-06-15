@@ -40,6 +40,13 @@ body {
 
 </style>
 
+<h3 style="background-color:black">
+{% if description %}
+    {{ description }}
+{% else %}
+    New description!
+{% endif %}
+</h3>
 
 <div class="wrapper">
     <canvas id="paint" width="750" height="635" style="border: 5px solid #000000; float: left">Update your browser to support HTML5 Canvas</canvas>
@@ -79,34 +86,11 @@ body {
     </div>
 </div>
 
-<form action="" method="post" style="clear: both">
-    {{ save_form.hidden_tag() }}
-    <br>
-    <p>
-        {{ save_form.filename }}<br>
-        {{ save_form.save() }}
-    </p>
-</form>
-<button onclick="save()">TheRealSave</button>
-<input id="fname">
-<button onclick="load()">Load Image</button>
-<button onclick="del()">Delete Image</button>
-<input id="description">
+<div>
+    <input id="fname"><br>
+    <button onclick="save()">Save</button>
+</div>
 
-{% for image_name in image_list %}
-    <a onclick="displayImage('{{ image_name }}')" href="#">{{ image_name }}</a>
-{% endfor %}
-
-{% for error in errors %}
-    <p style="background-color:red">{{ error }}</p>
-{% endfor %}
-
-{% if image_data %}
-    <p style="background-color:blue">textttt <img src="{{ image_data }}" alt="no image..."></p>
-{% else %}
-    <img src="{{ image_data }}" alt="no image...">
-    <p style="background-color:black">no image to display</p>
-{% endif %}
 
 <script>
 var canvas = document.getElementById("paint");
@@ -505,11 +489,6 @@ function displayImage(filename){
     $.post("/load_file", {"filename":filename}, function(data, status) { window.open(data); showSnackbar(status); });
 }
 
-function load(){
-    var filename = document.getElementById("fname").value;
-    $.post("/load_file", {"filename":filename}, function(data, status) { $('img').attr('src', data); showSnackbar(status); });
-}
-
 function loadCanvas(dataURL) {
     var imageObj = new Image();
     imageObj.onload = function() {
@@ -520,18 +499,12 @@ function loadCanvas(dataURL) {
 
 function save(){
     var filename = document.getElementById("fname").value;
-    var description = document.getElementById("description").value;
 
     var data = JSON.stringify(canvas_data);
     var image = canvas.toDataURL("image/png;base64;");
 
-    $.post("/save", { save_fname: filename, save_cdata: data, save_image: image }, function(data, status) { showSnackbar(data); });
+    $.post("/save", { save_fname: filename, save_cdata: data, save_image: image, desc_id: {{ desc_id }} }, function(data, status) { showSnackbar(data); });
     //ctx.drawImage(image, 10, 10);
-}
-
-function del() {
-    var filename = document.getElementById("fname").value;
-    $.post("/delete_file", {"filename":filename}, function(data, status) { showSnackbar(status + ": " + data); });
 }
 
 

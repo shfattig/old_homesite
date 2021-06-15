@@ -2,4 +2,14 @@
 
 source venv/bin/activate
 
+echo "starting mysql service..."
+sudo service mysql start &
+echo "done!"
+
 alias run="python homesite.py"
+alias db_start="sudo /etc/init.d/mysql start"
+alias db_stop="sudo /etc/init.d/mysql stop"
+alias db_login="mysql -u root -p"
+
+export FLASK_APP=homesite.py
+

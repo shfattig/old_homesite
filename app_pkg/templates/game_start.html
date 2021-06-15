@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<style>
+.block {
+    display: block;
+    width: 50%;
+    margin:0 auto;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 14px 28px;
+    margin-bottom: 10px;
+}
+.block:hover {
+    color: white;
+}
+</style>
+
+<h2 style="color: #00aabb; font-size: 40px; text-align: center; font-family: 'Courier New', monospace;">Welcome to THE GAME</h2>
+<p>
+<button id='newImageButton' class="block">New Image</button>
+<button id="newDescriptionButton" class="block">New Prompt</button>
+<form method="get" action="/pick_drawing">
+    <button class="block" type="submit">Continue Image</button>
+</form>
+<form method="get" action="/pick_description">
+    <button class="block" type="submit">Continue Description</button>
+</form>
+</p>
+
+<script>
+
+document.getElementById('newImageButton').onclick = function() {
+    location.href = '/draw';
+}
+
+document.getElementById('newDescriptionButton').onclick = function() {
+    location.href = '/write_description';
+}
+
+function next_description() {
+    description_id = $("textarea#description").data("id")
+    $.get("/next_description", {"id": description_id}, function(data) {
+        var json_data = JSON.parse(data);
+        $("textarea#description").val(json_data.text)
+        $("textarea#description").data("id", json_data.id)
+    });
+}
+
+function prev_description() {
+    description_id = $("textarea#description").data("id")
+    $.get("/prev_description", {"id": description_id}, function(data) {
+        var json_data = JSON.parse(data);
+        $("textarea#description").val(json_data.text)
+        $("textarea#description").data("id", json_data.id)
+    });
+}
+
+function load_description() {
+    $.get("/first_description", function(data) {
+        var json_data = JSON.parse(data);
+        $("textarea#description").val(json_data.text)
+        $("textarea#description").data("id", json_data.id)
+    });
+}
+
+$(document).ready(function() { load_description(); });
+
+</script>
+
+{% endblock %}

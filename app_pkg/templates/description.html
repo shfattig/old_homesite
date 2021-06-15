@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<style>
+body {
+  font-family: Arial;
+  color: white;
+}
+.wrapper > div {
+    border-top-right-radius: 10px;
+    border-bottom-right-radius: 10px;
+    background-color: rgb(207,232,220);
+    padding: 1em;
+}
+.wrapper {
+  <!--display: inline-block;-->
+}
+
+.wrapper button {
+    margin-bottom: 10px;
+    width: 100px;
+    height: 50px;
+}
+
+.wrapper select {
+    margin-bottom: 10px;
+    width: 100px;
+    height: 25px;
+}
+
+.color_palette {
+    margin-top: 4px;
+}
+
+.color_palette button {
+    width: 30px;
+    height: 30px;
+}
+
+</style>
+
+<h1 style="color:teal">{{ image_name }}</h1>
+<p>
+    <form action="" method="post" novalidate>
+        <textarea id="description_text" rows="4" columns="20"></textarea><br>
+        <input type="submit">
+        <button id="cancelButton">Cancel</button>
+    </form>
+</p>
+
+
+{% if image_data %}
+    <img src="{{ image_data }}" alt="no image...">
+{% endif %}
+
+
+<script>
+document.getElementById('cancelButton').onclick = function() {
+    location.href = '/game_start';
+}
+
+function submit_description(image_name) {
+    var description = document.getElementById("description_text").value;
+    $.post("/submit_description", { image_name: image_name, description: description }, function(data, status) { window.location.href = data; });
+}
+
+</script>
+
+{% endblock %}
