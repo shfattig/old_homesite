@@ -14,7 +14,7 @@ body {
     padding: 1em;
 }
 .wrapper {
-  <!--display: inline-block;-->
+  display: inline-block;
 }
 
 .wrapper button {
@@ -62,24 +62,25 @@ body {
           <option value="small">Small</option>
           <option value="medium">Medium</option>
           <option value="large">Large</option>
+          <option value="massive">Massive</option>
         </select>
         <br>
 
         <div class="color_palette">
-            <button id="set_red" type="button" style="background-color:#ff0000" onclick="set_color('#ff0000')"></button>
-            <button id="set_green" type="button" style="background-color:#00aa00" onclick="set_color('#00aa00')"></button>
-            <button id="set_blue" type="button" style="background-color:#0000ff" onclick="set_color('#0000ff')"></button>
+            <button id="set_red" type="button" style="background-color:#ff0000" onclick="set_color(this, '#ff0000')"></button>
+            <button id="set_green" type="button" style="background-color:#00aa00" onclick="set_color(this, '#00aa00')"></button>
+            <button id="set_blue" type="button" style="background-color:#0000ff" onclick="set_color(this, '#0000ff')"></button>
             <br>
-            <button id="set_teal" type="button" style="background-color:#00ffff" onclick="set_color('#00ffff')"></button>
-            <button id="set_yellow" type="button" style="background-color:#ffff00" onclick="set_color('#ffff00')"></button>
-            <button id="set_orange" type="button" style="background-color:#ff8800" onclick="set_color('#ff8800')"></button>
+            <button id="set_teal" type="button" style="background-color:#00ffff" onclick="set_color(this, '#00ffff')"></button>
+            <button id="set_yellow" type="button" style="background-color:#ffff00" onclick="set_color(this, '#ffff00')"></button>
+            <button id="set_orange" type="button" style="background-color:#ff8800" onclick="set_color(this, '#ff8800')"></button>
             <br>
-            <button id="set_light_green" type="button" style="background-color:#00ff00" onclick="set_color('#00ff00')"></button>
-            <button id="set_purple" type="button" style="background-color:#9900ff" onclick="set_color('#9900ff')"></button>
+            <button id="set_light_green" type="button" style="background-color:#00ff00" onclick="set_color(this, '#00ff00')"></button>
+            <button id="set_purple" type="button" style="background-color:#9900ff" onclick="set_color(this, '#9900ff')"></button>
             <br>
-            <button id="set_grey" type="button" style="background-color:#808080" onclick="set_color('#808080')"></button>
-            <button id="set_black" type="button" style="background-color:#000000" onclick="set_color('#000000')"></button>
-            <button id="set_white" type="button" style="background-color:#ffffff" onclick="set_color('#ffffff')"></button>
+            <button id="set_grey" type="button" style="background-color:#808080" onclick="set_color(this, '#808080')"></button>
+            <button id="set_black" type="button" style="background-color:#000000" onclick="set_color(this, '#000000')"></button>
+            <button id="set_white" type="button" style="background-color:#ffffff" onclick="set_color(this, '#ffffff')"></button>
         </div>
         <hr>
         <button id="resettool" type="button" onclick="reset()">Reset</button><br>
@@ -112,12 +113,25 @@ var line_on = false;
 var rect_on = false;
 var circle_on = false;
 
-function set_color(color_val) {
-    current_color = color_val
+function set_color(obj, color_val) {
+    current_color = color_val;
+    clear_color_selection(obj.parentElement);
+    var border_color = "black";
+    if (["set_black", "set_blue", "set_purple"].includes(obj.id)) {
+        border_color = "white";
+    }
+    obj.style.border = `${border_color} dashed 2px`;
+}
+
+function clear_color_selection(parentDiv) {
+    var children = parentDiv.children;
+    for (var i = 0; i < children.length; i++) {
+        children[i].style.border = "";
+    }
 }
 
 function getTouchPos(e) {
-    touch = e.touches[0]
+    touch = e.touches[0];
     curX = touch.pageX - touch.target.offsetLeft;
     curY = touch.pageY - touch.target.offsetTop;
 }
@@ -171,6 +185,8 @@ function change_size() {
         ctx.lineWidth = 10;
     } else if (selection == "large") {
         ctx.lineWidth = 20;
+    } else if (selection == "massive") {
+        ctx.lineWidth = 40;
     }
 }
 
