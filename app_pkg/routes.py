@@ -140,7 +140,7 @@ def draw(description_id=None, errors=[]):
         desc_text = None
     else:
         desc_text = description.text
-    return render_homesite_page('canvas.html', description=desc_text, desc_id=description_id)
+    return render_homesite_page('canvas.html', description=desc_text, desc_id=json.dumps(description_id))
 
 @app.route('/retrieve_image_names', methods=['GET', 'POST'])
 def retrieve_image_names():
@@ -169,9 +169,19 @@ def delete_image(image_name):
     if image is None:
         return 1
     else:
-        os.remove(f"app_pkg/static/{image.image_data}")
+        drawing_node = db.session.query(DrawingNode).filter_by(drawing_id=image.id).first()
+        db.session.delete(drawing_node)
+
+        description_node = db.session.query(DescriptionNode).filter_by(prev_drawing_id =image.id).first()
+        db.session.delete(description_node)
+
+        description_node = db.session.query(DescriptionNode).filter_by(next_drawing_id=image.id).first()
+        db.session.delete(description_node)
+
         db.session.delete(image)
         db.session.commit()
+
+        os.remove(f"app_pkg/static/{image.image_data}")
         return 0
 
 
