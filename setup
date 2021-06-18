@@ -3,7 +3,7 @@
 source venv/bin/activate
 
 echo "starting mysql service..."
-sudo service mysql start &
+sudo service mysql start
 echo "done!"
 
 alias run="python homesite.py"
