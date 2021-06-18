@@ -43,7 +43,7 @@ body {
 <h1 style="color:teal">{{ image_name }}</h1>
 <p>
     <form action="" method="post" novalidate>
-        <textarea id="description_text" rows="4" columns="20"></textarea><br>
+        <textarea name="description_text" rows="4" columns="20"></textarea><br>
         <input type="submit">
         <button id="cancelButton">Cancel</button>
     </form>
@@ -60,10 +60,6 @@ document.getElementById('cancelButton').onclick = function() {
     location.href = '/game_start';
 }
 
-function submit_description(image_name) {
-    var description = document.getElementById("description_text").value;
-    $.post("/submit_description", { image_name: image_name, description: description }, function(data, status) { window.location.href = data; });
-}
 
 </script>
 
