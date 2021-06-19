@@ -231,13 +231,23 @@ def select_image():
 def game_start():
     return render_homesite_page('game_start.html')
 
+def get_drawing_endpoints():
+    image_ids = [image_node.drawing_id for image_node in db.session.query(DrawingNode).all() if image_node.next_desc_id is None]
+    image_list = [image.name for image in db.session.query(Drawing).filter(Drawing.id.in_(image_ids)).all()]
+    return image_list
+
+def get_desc_endpoints():
+    desc_ids = [desc_node.desc_id for desc_node in db.session.query(DescriptionNode).all() if desc_node.next_drawing_id is None]
+    desc_list = [(desc.id, desc.text) for desc in db.session.query(Description).filter(Description.id.in_(desc_ids)).all()]
+    return desc_list
+
 @app.route('/pick_drawing', methods=['GET', 'POST'])
 def pick_drawing():
-    return render_homesite_page('pick_drawing.html', image_list=retrieve_image_names())
+    return render_homesite_page('pick_drawing.html', image_list=get_drawing_endpoints())
 
 @app.route('/pick_description', methods=['GET', 'POST'])
 def pick_description():
-    return render_homesite_page('pick_description.html', desc_list=retrieve_descs())
+    return render_homesite_page('pick_description.html', desc_list=get_desc_endpoints())
 
 @app.route('/delete_desc', methods=['GET', 'POST'])
 def delete_desc():
