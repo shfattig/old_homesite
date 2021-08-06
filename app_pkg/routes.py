@@ -140,7 +140,7 @@ def draw(description_id=None, errors=[]):
         desc_text = None
     else:
         desc_text = description.text
-    return render_homesite_page('canvas.html', description=desc_text, desc_id=json.dumps(description_id))
+    return render_homesite_page('canvas.html', description=desc_text, desc_id=description_id) #json.dumps(description_id))
 
 @app.route('/retrieve_image_names', methods=['GET', 'POST'])
 def retrieve_image_names():
@@ -318,7 +318,7 @@ def description_post(filename=None):
     db.session.add(new_description_node)
 
     db.session.commit()
-    return game_start()
+    return submitted()
 
 def get_image_data(filepath):
     """ Retrieve image file from filesystem and prepare for displaying on web
@@ -343,6 +343,14 @@ def write_description(filename=None):
         if image is not None:
             image_data = get_image_data(image.image_data)
     return render_homesite_page('description.html', image_name=image_name, image_data=image_data)
+
+@app.route('/submitted', methods=['GET'])
+def submitted():
+    return render_homesite_page('submitted.html')
+
+@app.route('/gallery', methods=['GET'])
+def visit_gallery():
+    return render_homesite_page('gallery.html', gallery_sequences=[1, 2, 3, 4])
 
 @app.route('/save', methods=['GET', 'POST'])
 @login_required
