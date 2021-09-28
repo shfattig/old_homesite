@@ -28,7 +28,7 @@ vim -S Session.vim
 // Set new password
 >> mysql -u root
 >> ALTER USER 'root'@'localhost' IDENTIFIED WITH caching_sha2_password BY 'yourpasswd';
-    root : AllIneedisyou
+    root : {pwd}
 
 // Try logging in!
 >> sudo /etc/init.d/mysql stop 
@@ -38,7 +38,7 @@ vim -S Session.vim
 
 // Create New User //
 >> CREATE USER 'newuser'@'localhost' IDENTIFIED BY 'password';
-    shaun : AllIneedisyou8*
+    shaun : {pwd}
 >> GRANT ALL PRIVILEGES ON * . * TO 'newuser'@'localhost'; // grant all privileges for user
 >> FLUSH PRIVILEGES;
 
